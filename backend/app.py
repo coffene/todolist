@@ -46,16 +46,29 @@ def create_task():
 def update_task(task_id):
     task = Task.query.get_or_404(task_id)
     data = request.json
+
+    update_fields = {}
     
+    # Kiểm tra và thêm các trường cần update
+    if 'status' in data:
+        update_fields['status'] = data['status']
     if 'title' in data:
-        task.title = data['title']
-    if 'completed' in data:
-        task.completed = data['completed']
-    if 'deadline' in data:
-        task.deadline = datetime.fromisoformat(data['deadline']) if data['deadline'] else None
+        update_fields['title'] = data['title']
+    if 'description' in data:
+        update_fields['description'] = data['description']
     
-    db.session.commit()
-    return jsonify(task.to_dict())
+    if update_fields:
+        result = todos.update_one(
+            {'_id': ObjectId(todo_id)},
+            {'$set': update_fields}
+        )
+        if result.modified_count:
+            # Lấy todo đã cập nhật để trả về
+            updated_todo = todos.find_one({'_id': ObjectId(todo_id)})
+            if updated_todo:
+                updated_todo['_id'] = str(updated_todo['_id'])
+                return jsonify(updated_todo)
+    return jsonify({'error': 'Invalid data or todo not found'}), 400
 
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
