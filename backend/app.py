@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
-from pymongo import MongoClient
+from pymongo import MongoClient, TEXT
 from datetime import datetime
 from bson import ObjectId
 from models import User, Task, Category
@@ -16,6 +16,9 @@ db = client['todolist']
 users = db['users']
 tasks = db['tasks']
 categories = db['categories']
+
+# Đảm bảo đã tạo text index (chạy 1 lần)
+tasks.create_index([("title", TEXT), ("description", TEXT)])
 
 # Helper function to convert ObjectId to string
 def convert_id(obj):
@@ -343,6 +346,91 @@ def admin_delete_task(task_id):
     if result.deleted_count:
         return '', 204
     return jsonify({'error': 'Task not found'}), 404
+
+@app.route('/api/tasks/stats/priority')
+def stats_by_priority():
+    pipeline = [
+        {"$group": {"_id": "$priority", "count": {"$sum": 1}}}
+    ]
+    result = list(tasks.aggregate(pipeline))
+    return jsonify(result)
+
+@app.route('/api/tasks/with-category')
+def tasks_with_category():
+    user_id = request.args.get('user_id')
+    match = {"user_id": ObjectId(user_id)} if user_id else {}
+    pipeline = [
+        {"$match": match},
+        {
+            "$lookup": {
+                "from": "categories",
+                "localField": "category_id",
+                "foreignField": "_id",
+                "as": "category"
+            }
+        },
+        {"$unwind": {"path": "$category", "preserveNullAndEmptyArrays": True}}
+    ]
+    result = list(tasks.aggregate(pipeline))
+    for t in result:
+        t['_id'] = str(t['_id'])
+        t['user_id'] = str(t['user_id'])
+        if t.get('category_id'):
+            t['category_id'] = str(t['category_id'])
+        if t.get('category'):
+            t['category']['_id'] = str(t['category']['_id'])
+    return jsonify(result)
+
+@app.route('/api/tasks/search')
+def search_tasks():
+    user_id = request.args.get('user_id')
+    query = request.args.get('q', '')
+    match = {"user_id": ObjectId(user_id)} if user_id else {}
+    if query:
+        match["$text"] = {"$search": query}
+    result = list(tasks.find(match))
+    for t in result:
+        t['_id'] = str(t['_id'])
+        t['user_id'] = str(t['user_id'])
+        if t.get('category_id'):
+            t['category_id'] = str(t['category_id'])
+    return jsonify(result)
+
+@app.route('/api/tasks/stats/category')
+def stats_by_category():
+    user_id = request.args.get('user_id')
+    match = {"user_id": ObjectId(user_id)} if user_id else {}
+    pipeline = [
+        {"$match": match},
+        {"$group": {"_id": "$category_id", "count": {"$sum": 1}}},
+        {
+            "$lookup": {
+                "from": "categories",
+                "localField": "_id",
+                "foreignField": "_id",
+                "as": "category"
+            }
+        },
+        {"$unwind": {"path": "$category", "preserveNullAndEmptyArrays": True}}
+    ]
+    result = list(tasks.aggregate(pipeline))
+    for r in result:
+        if r.get('category'):
+            r['category']['_id'] = str(r['category']['_id'])
+        if r.get('_id'):
+            r['_id'] = str(r['_id'])
+    return jsonify(result)
+
+@app.route('/api/tasks/stats/status')
+def stats_by_status():
+    user_id = request.args.get('user_id')
+    match = {"user_id": ObjectId(user_id)} if user_id else {}
+    pipeline = [
+        {"$match": match},
+        {"$group": {"_id": "$status", "count": {"$sum": 1}}}
+    ]
+    result = list(tasks.aggregate(pipeline))
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(debug=True) 
