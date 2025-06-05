@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const CategoryContext = createContext();
 
@@ -14,14 +15,22 @@ export const CategoryProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     let mounted = true;
 
     const fetchCategories = async () => {
+      if (!user) return;
+      
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/categories');
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:5000/api/categories?user_id=${user._id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (!response.ok) throw new Error('Failed to fetch categories');
         const data = await response.json();
         if (mounted) {
@@ -45,16 +54,23 @@ export const CategoryProvider = ({ children }) => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user]);
 
   const addCategory = async (newCategory) => {
+    if (!user) return;
+    
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:5000/api/categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newCategory),
+        body: JSON.stringify({
+          ...newCategory,
+          user_id: user._id
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to add category');
@@ -69,13 +85,20 @@ export const CategoryProvider = ({ children }) => {
   };
 
   const updateCategory = async (categoryId, updates) => {
+    if (!user) return;
+    
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          ...updates,
+          user_id: user._id
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to update category');
@@ -92,9 +115,18 @@ export const CategoryProvider = ({ children }) => {
   };
 
   const deleteCategory = async (categoryId) => {
+    if (!user) return;
+    
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:5000/api/categories/${categoryId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          user_id: user._id
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to delete category');

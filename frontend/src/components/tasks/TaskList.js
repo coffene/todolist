@@ -38,7 +38,7 @@ const TaskList = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/tasks', {
+      const response = await fetch(`http://localhost:5000/api/tasks?user_id=${user._id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -75,7 +75,10 @@ const TaskList = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(newTask),
+        body: JSON.stringify({
+          ...newTask,
+          user_id: user._id
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to create task');
