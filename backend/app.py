@@ -70,29 +70,35 @@ def get_user(user_id):
     user = users.find_one({'_id': ObjectId(user_id)})
     if not user:
         return jsonify({'error': 'User not found'}), 404
+    user.pop('password', None)
     return jsonify(convert_id(user))
 
 @app.route('/api/users/<user_id>', methods=['PUT'])
 def update_user(user_id):
     data = request.json
     update_fields = {}
-    
-    if 'settings' in data:
-        update_fields['settings'] = data['settings']
+    if 'username' in data:
+        update_fields['username'] = data['username']
+    if 'email' in data:
+        update_fields['email'] = data['email']
     if 'password' in data:
         update_fields['password'] = generate_password_hash(data['password'])
-    
+    if 'settings' in data:
+        update_fields['settings'] = data['settings']
     if not update_fields:
         return jsonify({'error': 'No fields to update'}), 400
-    
-    result = users.update_one(
-        {'_id': ObjectId(user_id)},
-        {'$set': update_fields}
-    )
-    
+    result = users.update_one({'_id': ObjectId(user_id)}, {'$set': update_fields})
     if result.modified_count:
         user = users.find_one({'_id': ObjectId(user_id)})
+        user.pop('password', None)
         return jsonify(convert_id(user))
+    return jsonify({'error': 'User not found or no change'}), 404
+
+@app.route('/api/users/<user_id>', methods=['DELETE'])
+def delete_user_account(user_id):
+    result = users.delete_one({'_id': ObjectId(user_id)})
+    if result.deleted_count:
+        return '', 204
     return jsonify({'error': 'User not found'}), 404
 
 @app.route('/api/users/login', methods=['POST'])
