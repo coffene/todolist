@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -9,47 +9,64 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Button,
 } from '@mui/material';
-import { Menu as MenuIcon, List as ListIcon, Category as CategoryIcon, Add as AddIcon } from '@mui/icons-material';
+import {
+  Menu as MenuIcon,
+  List as ListIcon,
+  Category as CategoryIcon,
+  Add as AddIcon,
+  AccountCircle,
+} from '@mui/icons-material';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import TodoList from './components/todo/TodoList';
 import CategoryManager from './components/category/CategoryManager';
 import AddTodo from './components/todo/AddTodo';
+import LoginForm from './components/auth/LoginForm';
+import RegisterForm from './components/auth/RegisterForm';
+import AdminPanel from './components/AdminPanel';
 
+// Protected Route component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  return children;
+};
+
+// Main App component
 function App() {
-  const [todos, setTodos] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
-  const [addOpen, setAddOpen] = useState(false);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Fetch todos from backend on mount
-    const fetchTodos = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/tasks');
-        const data = await response.json();
-        setTodos(data);
-      } catch (err) {
-        // handle error
-      }
-    };
-    fetchTodos();
-  }, []);
+  const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
+  const [userMenuAnchorEl, setUserMenuAnchorEl] = React.useState(null);
+  const [addOpen, setAddOpen] = React.useState(false);
+  const { user, logout } = useAuth();
 
   const handleMenuOpen = (event) => {
     setMenuAnchorEl(event.currentTarget);
   };
+
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
   };
-  const handleNavigate = (path) => {
-    navigate(path);
-    setMenuAnchorEl(null);
+
+  const handleUserMenuOpen = (event) => {
+    setUserMenuAnchorEl(event.currentTarget);
   };
 
-  // Khi thêm task mới
-  const handleAddNew = (newTask) => {
-    setTodos(prev => [newTask, ...prev]);
+  const handleUserMenuClose = () => {
+    setUserMenuAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    logout();
+    handleUserMenuClose();
   };
 
   return (
@@ -69,25 +86,54 @@ function App() {
             anchorEl={menuAnchorEl}
             open={Boolean(menuAnchorEl)}
             onClose={handleMenuClose}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
           >
-            <MenuItem onClick={() => handleNavigate('/')}> <ListIcon fontSize="small" sx={{ mr: 1 }} /> Tasks </MenuItem>
-            <MenuItem onClick={() => handleNavigate('/categories')}> <CategoryIcon fontSize="small" sx={{ mr: 1 }} /> Categories </MenuItem>
+            <MenuItem component="a" href="/">
+              <ListIcon fontSize="small" sx={{ mr: 1 }} /> Tasks
+            </MenuItem>
+            <MenuItem component="a" href="/categories">
+              <CategoryIcon fontSize="small" sx={{ mr: 1 }} /> Categories
+            </MenuItem>
+            {user && user.role === 'admin' && (
+              <MenuItem component="a" href="/admin">
+                <AccountCircle fontSize="small" sx={{ mr: 1 }} /> Admin Panel
+              </MenuItem>
+            )}
           </Menu>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             TodoList
           </Typography>
-          <IconButton
-            color="inherit"
-            aria-label="add task"
-            onClick={() => setAddOpen(true)}
-            sx={{ ml: 2 }}
-          >
-            <AddIcon />
-          </IconButton>
+          {user ? (
+            <>
+              <IconButton
+                color="inherit"
+                aria-label="add task"
+                onClick={() => setAddOpen(true)}
+                sx={{ mr: 2 }}
+              >
+                <AddIcon />
+              </IconButton>
+              <IconButton
+                color="inherit"
+                onClick={handleUserMenuOpen}
+              >
+                <AccountCircle />
+              </IconButton>
+              <Menu
+                anchorEl={userMenuAnchorEl}
+                open={Boolean(userMenuAnchorEl)}
+                onClose={handleUserMenuClose}
+              >
+                <MenuItem onClick={handleLogout}>Logout</MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <Button color="inherit" href="/login">Login</Button>
+          )}
         </Toolbar>
       </AppBar>
-      <AddTodo open={addOpen} setOpen={setAddOpen} onAdd={handleAddNew} />
+
+      <AddTodo open={addOpen} setOpen={setAddOpen} />
+
       <Box
         component="main"
         sx={{
@@ -102,10 +148,29 @@ function App() {
             <Route
               path="/"
               element={
-                <TodoList todos={todos} setTodos={setTodos} searchQuery={searchQuery} />
+                <ProtectedRoute>
+                  <TodoList />
+                </ProtectedRoute>
               }
             />
-            <Route path="/categories" element={<CategoryManager />} />
+            <Route
+              path="/categories"
+              element={
+                <ProtectedRoute>
+                  <CategoryManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPanel />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/register" element={<RegisterForm />} />
           </Routes>
         </Container>
       </Box>
@@ -113,10 +178,13 @@ function App() {
   );
 }
 
-export default function AppWithRouter() {
+// Wrap the app with AuthProvider
+export default function AppWithProviders() {
   return (
     <Router>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </Router>
   );
 }

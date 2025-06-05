@@ -21,7 +21,7 @@ import {
   Popover,
 } from '@mui/material';
 import { Add as AddIcon, MoreVert as MoreVertIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { ChromePicker } from 'react-color';
+import { useAuth } from '../../contexts/AuthContext';
 
 const API_URL = 'http://localhost:5000/api/categories';
 const defaultForm = { name: '', color: '#2196f3', icon: '', description: '' };
@@ -39,6 +39,7 @@ function renderIcon(icon) {
 }
 
 export default function CategoryManager() {
+  const { user } = useAuth();
   const [categories, setCategories] = useState([]);
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState(defaultForm);
@@ -50,8 +51,9 @@ export default function CategoryManager() {
   const [menuAnchorEls, setMenuAnchorEls] = useState({});
 
   const fetchCategories = async () => {
+    if (!user) return;
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(`${API_URL}?user_id=${user._id}`);
       const data = await res.json();
       setCategories(data);
     } catch (err) {
@@ -59,7 +61,7 @@ export default function CategoryManager() {
     }
   };
 
-  useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => { fetchCategories(); }, [user]);
 
   const handleOpen = (cat = null) => {
     if (cat) {
@@ -100,10 +102,12 @@ export default function CategoryManager() {
     }
     try {
       const url = editingCategory ? `${API_URL}/${editingCategory._id}` : API_URL;
+      const method = editingCategory ? 'PUT' : 'POST';
+      const body = JSON.stringify({ ...formData, user_id: user._id });
       const res = await fetch(url, {
-        method: editingCategory ? 'PUT' : 'POST',
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body
       });
       if (!res.ok) {
         const err = await res.json();
@@ -113,9 +117,7 @@ export default function CategoryManager() {
       }
       const savedCategory = await res.json();
       if (editingCategory) {
-        setCategories(categories.map(cat => 
-          cat._id === savedCategory._id ? savedCategory : cat
-        ));
+        setCategories(categories.map(cat => cat._id === savedCategory._id ? savedCategory : cat));
       } else {
         setCategories([...categories, savedCategory]);
       }
@@ -129,8 +131,12 @@ export default function CategoryManager() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this category?')) return;
-    await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-    fetchCategories();
+    const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setCategories(categories.filter(cat => cat._id !== id));
+    } else {
+      setError('Error deleting category');
+    }
   };
 
   // Dropdown menu handlers
@@ -254,7 +260,11 @@ export default function CategoryManager() {
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               >
                 <Box sx={{ p: 2 }}>
-                  <ChromePicker color={formData.color} onChange={handleColorChange} disableAlpha />
+                  <TextField
+                    type="color"
+                    value={formData.color}
+                    onChange={(e) => handleColorChange({ hex: e.target.value })}
+                  />
                 </Box>
               </Popover>
             </Box>

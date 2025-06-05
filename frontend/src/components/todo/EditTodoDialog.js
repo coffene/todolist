@@ -11,21 +11,28 @@ import {
   Select,
   MenuItem,
   Box,
-  Typography,
-  CircularProgress,
+  Chip,
+  Autocomplete,
 } from '@mui/material';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
 
-const EditTodoDialog = ({ open, onClose, onEdit, todo }) => {
+const EditTodoDialog = ({ open, onClose, todo, onEdit }) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'medium',
-    category: '',
-    deadline: '',
+    status: 'pending',
+    deadline: null,
+    category_id: '',
+    tags: [],
   });
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (todo) {
@@ -33,23 +40,10 @@ const EditTodoDialog = ({ open, onClose, onEdit, todo }) => {
         title: todo.title || '',
         description: todo.description || '',
         priority: todo.priority || 'medium',
-        category: todo.category || '',
-        deadline: todo.deadline
-          ? (() => {
-              const d = new Date(todo.deadline);
-              // Format yyyy-MM-ddTHH:mm
-              const pad = n => n.toString().padStart(2, '0');
-              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-            })()
-          : '',
-      });
-    } else {
-      setFormData({
-        title: '',
-        description: '',
-        priority: 'medium',
-        category: '',
-        deadline: '',
+        status: todo.status || 'pending',
+        deadline: todo.deadline ? new Date(todo.deadline) : null,
+        category_id: todo.category_id || '',
+        tags: todo.tags || [],
       });
     }
     fetchCategories();
@@ -57,160 +51,135 @@ const EditTodoDialog = ({ open, onClose, onEdit, todo }) => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/categories');
-      const data = await response.json();
-      setCategories(data);
-    } catch (err) {
-      setError('Failed to load categories');
+      const response = await axios.get(`http://localhost:5000/api/categories?user_id=${user._id}`);
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
     }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const url = todo
-        ? `http://localhost:5000/api/tasks/${todo._id}`
-        : 'http://localhost:5000/api/tasks';
-      
-      const response = await fetch(url, {
-        method: todo ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      let response;
+      if (todo) {
+        // Update existing todo
+        response = await axios.put(`http://localhost:5000/api/tasks/${todo._id}`, {
           ...formData,
-          description: formData.description || '',
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to save task');
-
-      const savedTask = await response.json();
-      onEdit(savedTask);
+          user_id: user._id,
+        });
+        if (onEdit) onEdit(response.data);
+      } else {
+        // Create new todo
+        response = await axios.post('http://localhost:5000/api/tasks', {
+          ...formData,
+          user_id: user._id,
+        });
+        if (onEdit) onEdit(response.data);
+      }
       onClose();
-    } catch (err) {
-      setError('Failed to save task');
+    } catch (error) {
+      console.error('Error saving todo:', error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleChange = (field) => (event) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
+  };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {todo ? 'Edit Task' : 'Add New Task'}
-      </DialogTitle>
-      <DialogContent>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <TextField
-            fullWidth
-            label="Title"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            required
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            label="Description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            multiline
-            rows={3}
-            sx={{ mb: 2 }}
-          />
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Priority</InputLabel>
-            <Select
-              name="priority"
-              value={formData.priority}
-              onChange={handleChange}
-              label="Priority"
-            >
-              <MenuItem value="low">Low</MenuItem>
-              <MenuItem value="medium">Medium</MenuItem>
-              <MenuItem value="high">High</MenuItem>
-            </Select>
-          </FormControl>
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Category</InputLabel>
-            <Select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              label="Category"
-              renderValue={selected => {
-                const cat = categories.find(c => c._id === selected);
-                if (!cat) return <em>None</em>;
-                return (
-                  <span style={{ display: 'flex', alignItems: 'center' }}>
-                    {cat.icon && (/^https?:\/\//.test(cat.icon)
-                      ? <img src={cat.icon} alt="icon" style={{ width: 18, height: 18, objectFit: 'contain', marginRight: 4 }} />
-                      : (() => { try { const IconComp = require('@mui/icons-material')[cat.icon]; if (IconComp) return <IconComp fontSize="small" sx={{ mr: 0.5 }} />; } catch {} return null; })()
-                    )}
-                    {cat.name}
-                  </span>
-                );
-              }}
-            >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {categories.map((category) => (
-                <MenuItem 
-                  key={category._id} 
-                  value={category._id}
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+      <form onSubmit={handleSubmit}>
+        <DialogTitle>{todo ? 'Edit Task' : 'Add New Task'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Title"
+              value={formData.title}
+              onChange={handleChange('title')}
+              required
+              fullWidth
+            />
+            <TextField
+              label="Description"
+              value={formData.description}
+              onChange={handleChange('description')}
+              multiline
+              rows={3}
+              fullWidth
+            />
+            <FormControl fullWidth>
+              <InputLabel>Priority</InputLabel>
+              <Select
+                value={formData.priority}
+                onChange={handleChange('priority')}
+                label="Priority"
+              >
+                <MenuItem value="low">Low</MenuItem>
+                <MenuItem value="medium">Medium</MenuItem>
+                <MenuItem value="high">High</MenuItem>
+              </Select>
+            </FormControl>
+            {todo && (
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={formData.status}
+                  onChange={handleChange('status')}
+                  label="Status"
                 >
-                  {category.icon && (/^https?:\/\//.test(category.icon)
-                    ? <img src={category.icon} alt="icon" style={{ width: 18, height: 18, objectFit: 'contain', marginRight: 4 }} />
-                    : (() => { try { const IconComp = require('@mui/icons-material')[category.icon]; if (IconComp) return <IconComp fontSize="small" sx={{ mr: 0.5 }} />; } catch {} return null; })()
-                  )}
-                  {category.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <TextField
-            fullWidth
-            label="Deadline"
-            name="deadline"
-            type="datetime-local"
-            value={formData.deadline}
-            onChange={handleChange}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            sx={{ mb: 2 }}
-          />
-          {error && (
-            <Typography color="error" sx={{ mb: 2 }}>
-              {error}
-            </Typography>
-          )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          onClick={handleSubmit}
-          variant="contained"
-          disabled={loading || !formData.title}
-        >
-          {loading ? <CircularProgress size={24} /> : 'Save'}
-        </Button>
-      </DialogActions>
+                  <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="completed">Completed</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={formData.category_id}
+                onChange={handleChange('category_id')}
+                label="Category"
+              >
+                <MenuItem value="">None</MenuItem>
+                {categories.map(category => (
+                  <MenuItem key={category._id} value={category._id}>
+                    {category.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DateTimePicker
+                label="Deadline"
+                value={formData.deadline}
+                onChange={(newValue) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    deadline: newValue
+                  }));
+                }}
+                renderInput={(params) => <TextField {...params} fullWidth />}
+              />
+            </LocalizationProvider>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+          >
+            {todo ? 'Save Changes' : 'Add Task'}
+          </Button>
+        </DialogActions>
+      </form>
     </Dialog>
   );
 };
