@@ -104,6 +104,11 @@ function App() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             TodoList
           </Typography>
+          {user && (
+            <Typography variant="subtitle1" sx={{ mr: 2 }}>
+              Hello, {user.username}
+            </Typography>
+          )}
           {user ? (
             <>
               <IconButton

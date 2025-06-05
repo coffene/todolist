@@ -23,6 +23,7 @@ const TaskList = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('created');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
@@ -221,6 +222,7 @@ const TaskList = () => {
 
     if (filter === 'active') return !task.completed;
     if (filter === 'completed') return task.completed;
+    if (selectedCategory !== 'all' && task.category_id !== selectedCategory) return false;
     return true;
   });
 
@@ -283,6 +285,38 @@ const TaskList = () => {
           color={filter === 'completed' ? 'primary' : 'default'}
           onClick={() => setFilter('completed')}
         />
+      </Stack>
+
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <Chip
+          label="All Categories"
+          color={selectedCategory === 'all' ? 'primary' : 'default'}
+          onClick={() => setSelectedCategory('all')}
+        />
+        {categories.map(category => (
+          <Chip
+            key={category._id}
+            label={category.name}
+            color={selectedCategory === category._id ? 'primary' : 'default'}
+            onClick={() => setSelectedCategory(category._id)}
+            sx={{
+              '& .MuiChip-label': {
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }
+            }}
+          >
+            <span style={{ 
+              display: 'inline-block', 
+              width: 12, 
+              height: 12, 
+              background: category.color, 
+              borderRadius: '50%' 
+            }} />
+            {category.name}
+          </Chip>
+        ))}
       </Stack>
 
       {sortedTasks.length === 0 ? (

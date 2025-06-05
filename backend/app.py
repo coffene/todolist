@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson import ObjectId
 from models import User, Task, Category
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -312,14 +312,59 @@ def delete_user(user_id):
 @app.route('/api/admin/stats', methods=['GET'])
 @admin_required
 def get_stats():
-    user_count = users.count_documents({})
-    task_count = tasks.count_documents({})
-    category_count = categories.count_documents({})
-    return jsonify({
-        'users': user_count,
-        'tasks': task_count,
-        'categories': category_count
-    })
+    try:
+        # Tổng quan
+        total_users = users.count_documents({})
+        total_categories = categories.count_documents({})
+        
+        # Thống kê người dùng
+        now = datetime.now()
+        day_ago = now - timedelta(days=1)
+        week_ago = now - timedelta(days=7)
+        month_ago = now - timedelta(days=30)
+        
+        new_users_24h = users.count_documents({'created_at': {'$gte': day_ago}})
+        active_users_24h = users.count_documents({'last_active': {'$gte': day_ago}})
+        admin_users = users.count_documents({'role': 'admin'})
+        admin_ratio = round((admin_users / total_users * 100) if total_users > 0 else 0, 1)
+        unverified_users = users.count_documents({'verified': False})
+        
+        # Thống kê hoạt động
+        new_tasks_24h = tasks.count_documents({'created_at': {'$gte': day_ago}})
+        completed_tasks_24h = tasks.count_documents({
+            'completed': True,
+            'updated_at': {'$gte': day_ago}
+        })
+        new_categories_24h = categories.count_documents({'created_at': {'$gte': day_ago}})
+        
+        total_tasks = tasks.count_documents({})
+        completed_tasks = tasks.count_documents({'completed': True})
+        completion_rate = round((completed_tasks / total_tasks * 100) if total_tasks > 0 else 0, 1)
+        
+        # Thống kê theo thời gian
+        new_users_7d = users.count_documents({'created_at': {'$gte': week_ago}})
+        new_tasks_7d = tasks.count_documents({'created_at': {'$gte': week_ago}})
+        new_users_30d = users.count_documents({'created_at': {'$gte': month_ago}})
+        new_tasks_30d = tasks.count_documents({'created_at': {'$gte': month_ago}})
+        
+        return jsonify({
+            'users': total_users,
+            'categories': total_categories,
+            'new_users_24h': new_users_24h,
+            'active_users_24h': active_users_24h,
+            'admin_ratio': admin_ratio,
+            'unverified_users': unverified_users,
+            'new_tasks_24h': new_tasks_24h,
+            'completed_tasks_24h': completed_tasks_24h,
+            'new_categories_24h': new_categories_24h,
+            'completion_rate': completion_rate,
+            'new_users_7d': new_users_7d,
+            'new_tasks_7d': new_tasks_7d,
+            'new_users_30d': new_users_30d,
+            'new_tasks_30d': new_tasks_30d
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/tasks', methods=['GET'])
 @admin_required
