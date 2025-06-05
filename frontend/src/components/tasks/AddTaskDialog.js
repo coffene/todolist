@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -11,79 +11,65 @@ import {
   Select,
   MenuItem,
   Box,
-  Chip,
-  Autocomplete,
+  CircularProgress,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import axios from 'axios';
 import { useAuth } from '../../contexts/AuthContext';
 
-const EditTodoDialog = ({ open, onClose, todo, onEdit }) => {
+const AddTaskDialog = ({ open, onClose, onAdd, categories }) => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 'medium',
-    status: 'pending',
+    completed: false,
     deadline: null,
-    category_id: '',
-    tags: [],
+    category: '',
   });
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (todo) {
-      setFormData({
-        title: todo.title || '',
-        description: todo.description || '',
-        priority: todo.priority || 'medium',
-        status: todo.status || 'pending',
-        deadline: todo.deadline ? new Date(todo.deadline) : null,
-        category_id: todo.category_id || '',
-        tags: todo.tags || [],
-      });
-    }
-    fetchCategories();
-  }, [todo]);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get(`http://localhost:5000/api/categories?user_id=${user._id}`);
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
+  const [titleError, setTitleError] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.title.trim()) {
+      setTitleError(true);
+      return;
+    }
+
     setLoading(true);
     try {
-      let response;
-      if (todo) {
-        // Update existing todo
-        response = await axios.put(`http://localhost:5000/api/tasks/${todo._id}`, {
-          ...formData,
-          user_id: user._id,
-        });
-        if (onEdit) onEdit(response.data);
-      } else {
-        // Create new todo
-        response = await axios.post('http://localhost:5000/api/tasks', {
-          ...formData,
-          user_id: user._id,
-        });
-        if (onEdit) onEdit(response.data);
-      }
-      onClose();
+      const taskData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        priority: formData.priority,
+        completed: formData.completed,
+        deadline: formData.deadline ? formData.deadline.toISOString() : null,
+        category: formData.category || null,
+        user_id: user._id,
+      };
+
+      await onAdd(taskData);
+      handleClose();
     } catch (error) {
-      console.error('Error saving todo:', error);
+      console.error('Error adding task:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClose = () => {
+    setFormData({
+      title: '',
+      description: '',
+      priority: 'medium',
+      completed: false,
+      deadline: null,
+      category: '',
+    });
+    setTitleError(false);
+    onClose();
   };
 
   const handleChange = (field) => (event) => {
@@ -91,12 +77,15 @@ const EditTodoDialog = ({ open, onClose, todo, onEdit }) => {
       ...prev,
       [field]: event.target.value
     }));
+    if (field === 'title') {
+      setTitleError(false);
+    }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <form onSubmit={handleSubmit}>
-        <DialogTitle>{todo ? 'Edit Task' : 'Add New Task'}</DialogTitle>
+        <DialogTitle>Add New Task</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
@@ -105,6 +94,9 @@ const EditTodoDialog = ({ open, onClose, todo, onEdit }) => {
               onChange={handleChange('title')}
               required
               fullWidth
+              error={titleError}
+              helperText={titleError ? 'Title is required' : ''}
+              autoFocus
             />
             <TextField
               label="Description"
@@ -126,24 +118,11 @@ const EditTodoDialog = ({ open, onClose, todo, onEdit }) => {
                 <MenuItem value="high">High</MenuItem>
               </Select>
             </FormControl>
-            {todo && (
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={formData.status}
-                  onChange={handleChange('status')}
-                  label="Status"
-                >
-                  <MenuItem value="pending">Pending</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                </Select>
-              </FormControl>
-            )}
             <FormControl fullWidth>
               <InputLabel>Category</InputLabel>
               <Select
-                value={formData.category_id}
-                onChange={handleChange('category_id')}
+                value={formData.category}
+                onChange={handleChange('category')}
                 label="Category"
               >
                 <MenuItem value="">None</MenuItem>
@@ -164,19 +143,23 @@ const EditTodoDialog = ({ open, onClose, todo, onEdit }) => {
                     deadline: newValue
                   }));
                 }}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                  },
+                }}
               />
             </LocalizationProvider>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={handleClose}>Cancel</Button>
           <Button
             type="submit"
             variant="contained"
             disabled={loading}
           >
-            {todo ? 'Save Changes' : 'Add Task'}
+            {loading ? <CircularProgress size={24} /> : 'Add Task'}
           </Button>
         </DialogActions>
       </form>
@@ -184,4 +167,4 @@ const EditTodoDialog = ({ open, onClose, todo, onEdit }) => {
   );
 };
 
-export default EditTodoDialog; 
+export default AddTaskDialog; 
