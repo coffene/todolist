@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -7,23 +7,46 @@ import {
   TextField,
   Button,
   Box,
+  MenuItem,
+  CircularProgress,
 } from '@mui/material';
 
 const AddTodoDialog = ({ open, onClose, onAdd }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState('medium');
+  const [category, setCategory] = useState('');
+  const [deadline, setDeadline] = useState('');
   const [titleError, setTitleError] = useState(false);
+  const [deadlineError, setDeadlineError] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loadingCat, setLoadingCat] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setLoadingCat(true);
+      fetch('http://localhost:5000/api/categories')
+        .then(res => res.json())
+        .then(data => setCategories(data))
+        .finally(() => setLoadingCat(false));
+    }
+  }, [open]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    let hasError = false;
     if (!title.trim()) {
       setTitleError(true);
-      return;
+      hasError = true;
     }
+    if (!deadline) {
+      setDeadlineError(true);
+      hasError = true;
+    }
+    if (hasError) return;
 
     try {
-      const response = await fetch('http://localhost:5000/api/todos', {
+      const response = await fetch('http://localhost:5000/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -31,6 +54,9 @@ const AddTodoDialog = ({ open, onClose, onAdd }) => {
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim(),
+          priority,
+          category,
+          deadline,
         }),
       });
 
@@ -47,7 +73,11 @@ const AddTodoDialog = ({ open, onClose, onAdd }) => {
   const handleClose = () => {
     setTitle('');
     setDescription('');
+    setPriority('medium');
+    setCategory('');
+    setDeadline('');
     setTitleError(false);
+    setDeadlineError(false);
     onClose();
   };
 
@@ -56,7 +86,7 @@ const AddTodoDialog = ({ open, onClose, onAdd }) => {
       <form onSubmit={handleSubmit}>
         <DialogTitle>Add New Todo</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               autoFocus
               label="Title"
@@ -68,15 +98,55 @@ const AddTodoDialog = ({ open, onClose, onAdd }) => {
               }}
               error={titleError}
               helperText={titleError ? 'Title is required' : ''}
-              sx={{ mb: 2 }}
             />
             <TextField
               label="Description"
               fullWidth
               multiline
-              rows={4}
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+            />
+            <TextField
+              select
+              label="Priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              fullWidth
+            >
+              <MenuItem value="high">High</MenuItem>
+              <MenuItem value="medium">Medium</MenuItem>
+              <MenuItem value="low">Low</MenuItem>
+            </TextField>
+            <TextField
+              select
+              label="Category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              fullWidth
+              SelectProps={{ displayEmpty: true }}
+              disabled={loadingCat}
+            >
+              <MenuItem value=""><em>None</em></MenuItem>
+              {categories.map(cat => (
+                <MenuItem key={cat._id} value={cat._id}>
+                  <span style={{ display: 'inline-block', width: 12, height: 12, background: cat.color, borderRadius: '50%', marginRight: 8 }} />
+                  {cat.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Deadline"
+              type="datetime-local"
+              fullWidth
+              value={deadline}
+              onChange={(e) => {
+                setDeadline(e.target.value);
+                setDeadlineError(false);
+              }}
+              error={deadlineError}
+              helperText={deadlineError ? 'Deadline is required' : ''}
+              InputLabelProps={{ shrink: true }}
             />
           </Box>
         </DialogContent>

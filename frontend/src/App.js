@@ -1,116 +1,122 @@
-import React, { useState } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { Container, Box, Fab } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
-import Header from './components/layout/Header';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Container,
+  Box,
+  IconButton,
+  Menu,
+  MenuItem,
+} from '@mui/material';
+import { Menu as MenuIcon, List as ListIcon, Category as CategoryIcon, Add as AddIcon } from '@mui/icons-material';
 import TodoList from './components/todo/TodoList';
-import AddTodoDialog from './components/todo/AddTodoDialog';
+import CategoryManager from './components/category/CategoryManager';
+import AddTodo from './components/todo/AddTodo';
 
 function App() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [todos, setTodos] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [todoListKey, setTodoListKey] = useState(0); // For forcing re-render
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const navigate = useNavigate();
 
-  // Create theme based on dark mode
-  const theme = createTheme({
-    palette: {
-      mode: darkMode ? 'dark' : 'light',
-      primary: {
-        main: '#2196f3', // A nice blue color
-      },
-      secondary: {
-        main: '#f50057', // A pink accent color
-      },
-      background: {
-        default: darkMode ? '#303030' : '#f5f5f5',
-        paper: darkMode ? '#424242' : '#ffffff',
-      },
-    },
-    typography: {
-      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-      h6: {
-        fontWeight: 500,
-      },
-    },
-    shape: {
-      borderRadius: 8,
-    },
-    components: {
-      MuiAppBar: {
-        styleOverrides: {
-          root: {
-            backgroundColor: darkMode ? '#1e1e1e' : '#1976d2',
-          },
-        },
-      },
-    },
-  });
+  useEffect(() => {
+    // Fetch todos from backend on mount
+    const fetchTodos = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/tasks');
+        const data = await response.json();
+        setTodos(data);
+      } catch (err) {
+        // handle error
+      }
+    };
+    fetchTodos();
+  }, []);
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+  const handleMenuOpen = (event) => {
+    setMenuAnchorEl(event.currentTarget);
+  };
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+  };
+  const handleNavigate = (path) => {
+    navigate(path);
+    setMenuAnchorEl(null);
   };
 
-  const handleSearch = (query) => {
-    setSearchQuery(query);
-  };
-
-  const handleAddTodo = (newTodo) => {
-    // Force TodoList to re-fetch by changing its key
-    setTodoListKey(prev => prev + 1);
+  // Khi thêm task mới
+  const handleAddNew = (newTask) => {
+    setTodos(prev => [newTask, ...prev]);
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <AppBar position="static">
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            aria-label="open menu"
+            edge="start"
+            onClick={handleMenuOpen}
+            sx={{ mr: 2 }}
+          >
+            <MenuIcon />
+          </IconButton>
+          <Menu
+            anchorEl={menuAnchorEl}
+            open={Boolean(menuAnchorEl)}
+            onClose={handleMenuClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          >
+            <MenuItem onClick={() => handleNavigate('/')}> <ListIcon fontSize="small" sx={{ mr: 1 }} /> Tasks </MenuItem>
+            <MenuItem onClick={() => handleNavigate('/categories')}> <CategoryIcon fontSize="small" sx={{ mr: 1 }} /> Categories </MenuItem>
+          </Menu>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            TodoList
+          </Typography>
+          <IconButton
+            color="inherit"
+            aria-label="add task"
+            onClick={() => setAddOpen(true)}
+            sx={{ ml: 2 }}
+          >
+            <AddIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+      <AddTodo open={addOpen} setOpen={setAddOpen} onAdd={handleAddNew} />
       <Box
+        component="main"
         sx={{
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-          transition: 'background-color 0.3s ease',
+          flexGrow: 1,
+          p: 3,
+          width: '100%',
+          ml: 0,
         }}
       >
-        <Header
-          darkMode={darkMode}
-          toggleDarkMode={toggleDarkMode}
-          onSearch={handleSearch}
-        />
-        <Container
-          maxWidth="md"
-          sx={{
-            mt: 10,
-            pt: 3,
-            pb: 6,
-            px: { xs: 0, sm: 3 }, // Remove padding on mobile
-          }}
-        >
-          <TodoList key={todoListKey} searchQuery={searchQuery} />
+        <Container maxWidth="lg">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <TodoList todos={todos} setTodos={setTodos} searchQuery={searchQuery} />
+              }
+            />
+            <Route path="/categories" element={<CategoryManager />} />
+          </Routes>
         </Container>
-        <Fab
-          color="primary"
-          aria-label="add"
-          onClick={() => setIsAddDialogOpen(true)}
-          sx={{
-            position: 'fixed',
-            bottom: 24,
-            right: 24,
-            transition: 'transform 0.2s',
-            '&:hover': {
-              transform: 'scale(1.1)',
-            },
-          }}
-        >
-          <AddIcon />
-        </Fab>
-        <AddTodoDialog
-          open={isAddDialogOpen}
-          onClose={() => setIsAddDialogOpen(false)}
-          onAdd={handleAddTodo}
-        />
       </Box>
-    </ThemeProvider>
+    </Box>
   );
 }
 
-export default App;
+export default function AppWithRouter() {
+  return (
+    <Router>
+      <App />
+    </Router>
+  );
+}

@@ -6,7 +6,6 @@ import {
   InputBase,
   IconButton,
   Box,
-  useTheme,
   alpha,
 } from '@mui/material';
 import {
@@ -56,7 +55,6 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 
 const Header = ({ darkMode, toggleDarkMode, onSearch }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const theme = useTheme();
 
   const handleSearchChange = (event) => {
     const value = event.target.value;

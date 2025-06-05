@@ -13,8 +13,8 @@ function TodoItem({ todo, onUpdate, onDelete }) {
             <Typography
               variant="h6"
               sx={{
-                textDecoration: todo.status ? 'line-through' : 'none',
-                color: todo.status ? 'text.secondary' : 'text.primary'
+                textDecoration: todo.completed ? 'line-through' : 'none',
+                color: todo.completed ? 'text.secondary' : 'text.primary'
               }}
             >
               {todo.title}
@@ -25,10 +25,10 @@ function TodoItem({ todo, onUpdate, onDelete }) {
           </Box>
           <Box>
             <IconButton
-              onClick={() => onUpdate(todo._id, !todo.status)}
-              color={todo.status ? 'success' : 'default'}
+              onClick={() => onUpdate(todo._id, !todo.completed)}
+              color={todo.completed ? 'success' : 'default'}
             >
-              {todo.status ? <CheckCircleIcon /> : <RadioButtonUncheckedIcon />}
+              {todo.completed ? <CheckCircleIcon /> : <RadioButtonUncheckedIcon />}
             </IconButton>
             <IconButton onClick={() => onDelete(todo._id)} color="error">
               <DeleteIcon />
