@@ -1,166 +1,151 @@
-# TodoList Project
+# TodoList Application
 
-Đây là một ứng dụng TodoList đơn giản được xây dựng với Flask (Backend) và React (Frontend).
+Ứng dụng quản lý công việc (Todo List) với đầy đủ tính năng, được xây dựng bằng React và Flask.
 
-## Cấu trúc dự án
+## Tính năng chính
 
-```
-todolist/
-├── backend/           # Flask backend
-│   ├── app.py        # File chính của backend
-│   └── requirements.txt
-└── frontend/         # React frontend
-    ├── src/
-    │   ├── components/
-    │   │   ├── TodoList.js   # Component chính quản lý danh sách
-    │   │   ├── TodoForm.js   # Form thêm todo mới
-    │   │   └── TodoItem.js   # Component hiển thị từng todo
-    │   └── App.js
-    └── package.json
-```
+### Quản lý Tasks
+- Tạo, sửa, xóa tasks
+- Đánh dấu hoàn thành/chưa hoàn thành
+- Gán priority (cao/trung bình/thấp)
+- Đặt deadline
+- Thêm mô tả chi tiết
+- Tìm kiếm và lọc tasks
+- Sắp xếp theo nhiều tiêu chí
 
-## Hướng dẫn cài đặt
+### Quản lý Categories
+- Tạo và quản lý categories
+- Gán màu sắc và icon cho categories
+- Phân loại tasks theo categories
+- Thống kê số lượng tasks trong mỗi category
 
-### Backend (Flask)
+### Người dùng
+- Đăng ký và đăng nhập
+- Quản lý thông tin cá nhân
+- Tùy chỉnh giao diện
+- Phân quyền admin/user
 
-1. Cài đặt Python và MongoDB:
-   - Python 3.x
-   - MongoDB Community Edition
+### Admin Panel
+- Quản lý người dùng
+- Thống kê hệ thống
+- Theo dõi hoạt động
 
-2. Tạo môi trường ảo và cài đặt dependencies:
+## Công nghệ sử dụng
+
+### Frontend
+- React.js
+- Material-UI
+- React Context API
+- Axios
+- React Router
+
+### Backend
+- Flask (Python)
+- MongoDB
+- JWT Authentication
+- Flask-CORS
+
+## Cài đặt
+
+### Yêu cầu
+- Node.js (v14+)
+- Python (v3.8+)
+- MongoDB
+
+### Backend
 ```bash
 cd backend
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 # hoặc
 venv\Scripts\activate  # Windows
-
 pip install -r requirements.txt
-```
-
-3. Chạy backend:
-```bash
 python app.py
 ```
-Backend sẽ chạy tại http://localhost:5000
 
-### Frontend (React)
-
-1. Cài đặt Node.js và npm
-
-2. Cài đặt dependencies:
+### Frontend
 ```bash
 cd frontend
 npm install
-```
-
-3. Chạy frontend:
-```bash
 npm start
 ```
-Frontend sẽ chạy tại http://localhost:3000
+
+## Cấu trúc dự án
+
+```
+todolist/
+├── frontend/
+│   ├── public/
+│   └── src/
+│       ├── components/
+│       │   ├── tasks/
+│       │   ├── categories/
+│       │   ├── auth/
+│       │   └── AdminPanel.js
+│       ├── contexts/
+│       ├── App.js
+│       └── index.js
+└── backend/
+    ├── app.py
+    ├── models.py
+    └── requirements.txt
+```
 
 ## API Endpoints
 
-Backend cung cấp các API sau:
+### User APIs
+- `POST /api/users` - Đăng ký
+- `POST /api/users/login` - Đăng nhập
+- `GET /api/users/<id>` - Lấy thông tin user
+- `PUT /api/users/<id>` - Cập nhật user
 
-1. Lấy danh sách todos:
-```
-GET /api/todos
-```
+### Task APIs
+- `GET /api/tasks` - Lấy danh sách tasks
+- `POST /api/tasks` - Tạo task mới
+- `PUT /api/tasks/<id>` - Cập nhật task
+- `DELETE /api/tasks/<id>` - Xóa task
 
-2. Thêm todo mới:
-```
-POST /api/todos
-Body: {
-    "title": "string",
-    "description": "string"
-}
-```
+### Category APIs
+- `GET /api/categories` - Lấy danh sách categories
+- `POST /api/categories` - Tạo category mới
+- `PUT /api/categories/<id>` - Cập nhật category
+- `DELETE /api/categories/<id>` - Xóa category
 
-3. Cập nhật trạng thái todo:
-```
-PUT /api/todos/<todo_id>
-Body: {
-    "status": boolean
-}
-```
+### Admin APIs
+- `GET /api/admin/stats` - Thống kê
+- `GET /api/admin/users` - Quản lý users
 
-4. Xóa todo:
-```
-DELETE /api/todos/<todo_id>
-```
+## Tính năng bảo mật
 
-## Cách làm việc với dự án
+- JWT Authentication
+- Password hashing
+- Role-based authorization
+- Input validation
+- CORS configuration
 
-### Backend Developer
+## Tính năng UI/UX
 
-1. Quản lý file `backend/app.py`:
-   - Thêm/sửa/xóa API endpoints
-   - Xử lý logic nghiệp vụ
-   - Kết nối với MongoDB
+- Material Design
+- Responsive layout
+- Dark/Light theme
+- Loading states
+- Error handling
+- Snackbar notifications
 
-2. Các bước phát triển:
-   - Đọc hiểu code hiện tại
-   - Thêm validation cho API
-   - Xử lý lỗi
-   - Tối ưu database queries
+## Contributing
 
-### Frontend Developer
+1. Fork dự án
+2. Tạo branch mới (`git checkout -b feature/AmazingFeature`)
+3. Commit thay đổi (`git commit -m 'Add some AmazingFeature'`)
+4. Push lên branch (`git push origin feature/AmazingFeature`)
+5. Tạo Pull Request
 
-1. Quản lý thư mục `frontend/src/components/`:
-   - `TodoList.js`: Component chính quản lý state và gọi API
-   - `TodoForm.js`: Form thêm todo mới
-   - `TodoItem.js`: Hiển thị từng todo item
+## License
 
-2. Các bước phát triển:
-   - Đọc hiểu cấu trúc components
-   - Thêm tính năng mới vào UI
-   - Cải thiện UX
-   - Xử lý lỗi và loading states
+MIT License - xem file [LICENSE](LICENSE) để biết thêm chi tiết
 
-## Cách phối hợp
+## Contact
 
-1. Sử dụng Git:
-```bash
-# Tạo branch mới
-git checkout -b feature/ten-tinh-nang
+Your Name - your.email@example.com
 
-# Commit thay đổi
-git add .
-git commit -m "[Backend/Frontend] Mô tả thay đổi"
-
-# Push lên remote
-git push origin feature/ten-tinh-nang
-```
-
-2. Quy ước commit message:
-- [Backend] Thêm API mới
-- [Frontend] Cải thiện UI
-- [Fix] Sửa lỗi...
-
-3. Code review:
-- Tạo Pull Request
-- Review code cho nhau
-- Merge sau khi được approve
-
-## Tài liệu tham khảo
-
-1. Flask:
-   - [Flask Documentation](https://flask.palletsprojects.com/)
-   - [Flask-MongoDB](https://flask-pymongo.readthedocs.io/)
-
-2. React:
-   - [React Documentation](https://reactjs.org/)
-   - [Material-UI](https://mui.com/)
-
-3. MongoDB:
-   - [MongoDB Documentation](https://docs.mongodb.com/)
-
-## Hỗ trợ
-
-Nếu có thắc mắc, hãy:
-1. Đọc kỹ tài liệu
-2. Kiểm tra code hiện tại
-3. Hỏi team member
-4. Tìm kiếm trên Google/Stack Overflow
+Project Link: [https://github.com/yourusername/todolist](https://github.com/yourusername/todolist)
