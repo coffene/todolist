@@ -35,6 +35,8 @@ const TaskItem = ({ task, onToggleComplete, onEdit, onDelete, categories }) => {
           },
           position: 'relative',
           overflow: 'visible',
+          opacity: task.completed ? 0.8 : 1,
+          borderLeft: task.completed ? '5px solid #4caf50' : 'none',
         }}
       >
         <CardContent>
@@ -50,15 +52,29 @@ const TaskItem = ({ task, onToggleComplete, onEdit, onDelete, categories }) => {
                 '&:hover': {
                   bgcolor: 'transparent',
                 },
+                '& .MuiSvgIcon-root': {
+                  fontSize: '1.5rem',
+                },
               }}
             />
             <Box sx={{ flexGrow: 1 }}>
               <Typography
                 variant="h6"
                 sx={{
-                  textDecoration: task.completed ? 'line-through' : 'none',
+                  textDecoration: task.completed ? 'line-through 1.5px' : 'none',
                   color: task.completed ? 'text.disabled' : 'text.primary',
                   transition: 'all 0.3s ease',
+                  position: 'relative',
+                  '&:after': task.completed ? {
+                    content: '""',
+                    position: 'absolute',
+                    left: 0,
+                    top: '50%',
+                    width: '100%',
+                    height: '1.5px',
+                    backgroundColor: 'text.disabled',
+                    transition: 'width 0.3s ease',
+                  } : {},
                 }}
               >
                 {task.title}
@@ -72,7 +88,7 @@ const TaskItem = ({ task, onToggleComplete, onEdit, onDelete, categories }) => {
                     mb: 2,
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
-                    textDecoration: task.completed ? 'line-through' : 'none',
+                    textDecoration: task.completed ? 'line-through 1.5px' : 'none',
                     transition: 'all 0.3s ease',
                   }}
                 >
@@ -126,8 +142,10 @@ const TaskItem = ({ task, onToggleComplete, onEdit, onDelete, categories }) => {
               label={task.completed ? "Completed" : "In Progress"}
               size="small"
               color={task.completed ? "success" : "default"}
+              variant={task.completed ? "filled" : "outlined"}
               sx={{
                 transition: 'all 0.3s ease',
+                fontWeight: task.completed ? 'bold' : 'normal',
               }}
             />
           </Stack>

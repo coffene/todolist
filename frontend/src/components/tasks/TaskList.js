@@ -33,20 +33,34 @@ const TaskList = () => {
   const { categories, loading: loadingCategories } = useCategories();
 
   const fetchTasks = useCallback(async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/tasks?user_id=${user._id}`);
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/tasks', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
       if (!response.ok) throw new Error('Failed to fetch tasks');
+      
       const data = await response.json();
       setTasks(data);
       setError(null);
     } catch (err) {
       console.error('Error fetching tasks:', err);
       setError('Failed to load tasks');
+      setSnackbar({
+        open: true,
+        message: 'Failed to load tasks',
+        severity: 'error',
+      });
     } finally {
       setLoading(false);
     }
-  }, [user._id]);
+  }, [user]);
 
   useEffect(() => {
     fetchTasks();
@@ -54,21 +68,20 @@ const TaskList = () => {
 
   const handleAddTask = async (newTask) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:5000/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...newTask,
-          user_id: user._id,
-        }),
+        body: JSON.stringify(newTask),
       });
 
       if (!response.ok) throw new Error('Failed to create task');
 
       const createdTask = await response.json();
-      setTasks(prevTasks => [...prevTasks, createdTask]);
+      setTasks(prevTasks => [createdTask, ...prevTasks]);
       setAddDialogOpen(false);
       setSnackbar({
         open: true,
@@ -85,12 +98,58 @@ const TaskList = () => {
     }
   };
 
+  const handleToggleComplete = async (taskId, currentCompleted) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Toggling task completion:', taskId, 'Current status:', currentCompleted);
+      
+      const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          completed: !currentCompleted
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update task');
+      }
+
+      const updatedTask = await response.json();
+      console.log('Updated task:', updatedTask);
+      
+      setTasks(prevTasks =>
+        prevTasks.map(task =>
+          task._id === taskId ? { ...task, completed: !currentCompleted } : task
+        )
+      );
+      
+      setSnackbar({
+        open: true,
+        message: `Task marked as ${!currentCompleted ? 'completed' : 'active'}`,
+        severity: 'success',
+      });
+    } catch (err) {
+      console.error('Error updating task:', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to update task status',
+        severity: 'error',
+      });
+    }
+  };
+
   const handleEditTask = async (updatedTask) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:5000/api/tasks/${editingTask._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(updatedTask),
       });
@@ -121,8 +180,12 @@ const TaskList = () => {
 
   const handleDeleteTask = async (taskId) => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) throw new Error('Failed to delete task');
@@ -138,41 +201,6 @@ const TaskList = () => {
       setSnackbar({
         open: true,
         message: 'Failed to delete task',
-        severity: 'error',
-      });
-    }
-  };
-
-  const handleToggleComplete = async (taskId, currentCompleted) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          completed: !currentCompleted
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update task');
-
-      const updatedTask = await response.json();
-      setTasks(prevTasks =>
-        prevTasks.map(task =>
-          task._id === taskId ? updatedTask : task
-        )
-      );
-      setSnackbar({
-        open: true,
-        message: `Task marked as ${!currentCompleted ? 'completed' : 'active'}`,
-        severity: 'success',
-      });
-    } catch (err) {
-      console.error('Error updating task:', err);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update task',
         severity: 'error',
       });
     }
