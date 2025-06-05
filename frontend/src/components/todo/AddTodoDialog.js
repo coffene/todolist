@@ -55,7 +55,7 @@ const AddTodoDialog = ({ open, onClose, onAdd }) => {
           title: title.trim(),
           description: description.trim(),
           priority,
-          category,
+          category_id: category || null,
           deadline,
         }),
       });

@@ -152,6 +152,9 @@ def update_task(task_id):
     if not task:
         return jsonify({'error': 'Task not found'}), 404
     update_fields = {}
+    # Hỗ trợ cập nhật status từ completed
+    if 'completed' in data:
+        update_fields['status'] = 'completed' if data['completed'] else 'pending'
     for field in ['title', 'description', 'priority', 'status']:
         if field in data:
             update_fields[field] = data[field]

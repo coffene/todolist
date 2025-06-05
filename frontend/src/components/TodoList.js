@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Container } from '@mui/material';
+import { useContext } from 'react';
+// Giả sử bạn có AuthContext hoặc props truyền user_id
+// import { AuthContext } from '../contexts/AuthContext';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -15,7 +18,7 @@ function formatDate(dateString) {
   });
 }
 
-function TodoList() {
+function TodoList(props) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [editingTask, setEditingTask] = useState(null);
@@ -26,14 +29,18 @@ function TodoList() {
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('deadline');
   const [error, setError] = useState(null);
+  // const { user } = useContext(AuthContext);
+  // const user_id = user?._id || props.user_id;
+  const user_id = props.user_id; // hoặc lấy từ context nếu có
 
   useEffect(() => {
     fetchTasks();
-  }, []);
+    // fetchCategories nếu có
+  }, [user_id]);
 
   const fetchTasks = async () => {
     try {
-      const response = await axios.get(`${API_URL}/tasks`);
+      const response = await axios.get(`${API_URL}/tasks?user_id=${user_id}`);
       setTasks(response.data);
       setError(null);
     } catch (error) {
@@ -51,8 +58,9 @@ function TodoList() {
         title: newTask,
         deadline: deadline || null,
         priority,
-        category,
-        notes
+        category_id: category || null,
+        notes,
+        user_id
       });
       setTasks([...tasks, response.data]);
       resetForm();
@@ -106,8 +114,9 @@ function TodoList() {
         title: newTask,
         deadline: deadline || null,
         priority,
-        category,
-        notes
+        category_id: category || null,
+        notes,
+        user_id
       });
       setTasks(tasks.map(task => task._id === editingTask._id ? response.data : task));
       setEditingTask(null);

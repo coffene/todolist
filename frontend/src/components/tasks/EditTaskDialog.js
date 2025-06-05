@@ -39,7 +39,7 @@ const EditTaskDialog = ({ open, onClose, task, onEdit, categories }) => {
         priority: task.priority || 'medium',
         completed: task.completed || false,
         deadline: task.deadline ? new Date(task.deadline) : null,
-        category: task.category || '',
+        category: task.category_id || '',
       });
       setTitleError(false);
     }
@@ -61,7 +61,7 @@ const EditTaskDialog = ({ open, onClose, task, onEdit, categories }) => {
         priority: formData.priority,
         completed: formData.completed,
         deadline: formData.deadline ? formData.deadline.toISOString() : null,
-        category: formData.category || null,
+        category_id: formData.category || null,
         user_id: user._id,
       };
 

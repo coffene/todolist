@@ -46,7 +46,7 @@ const AddTaskDialog = ({ open, onClose, onAdd, categories }) => {
         priority: formData.priority,
         completed: formData.completed,
         deadline: formData.deadline ? formData.deadline.toISOString() : null,
-        category: formData.category || null,
+        category_id: formData.category || null,
         user_id: user._id,
       };
 

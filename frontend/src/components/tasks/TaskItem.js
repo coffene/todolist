@@ -21,7 +21,7 @@ import {
 const TaskItem = ({ task, onToggleComplete, onEdit, onDelete, categories }) => {
   const deadline = task.deadline ? new Date(task.deadline) : null;
   const isOverdue = deadline && deadline < new Date() && !task.completed;
-  const category = categories.find(cat => cat._id === task.category);
+  const category = categories.find(cat => cat._id === task.category_id);
 
   return (
     <Fade in>
