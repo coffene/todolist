@@ -10,6 +10,7 @@ import {
   Menu,
   MenuItem,
   Button,
+  Fab,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -18,10 +19,12 @@ import {
   Add as AddIcon,
   AccountCircle,
 } from '@mui/icons-material';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import TodoList from './components/todo/TodoList';
+import { CategoryProvider } from './contexts/CategoryContext';
+import TaskList from './components/tasks/TaskList';
 import CategoryManager from './components/category/CategoryManager';
-import AddTodo from './components/todo/AddTodo';
 import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import AdminPanel from './components/AdminPanel';
@@ -45,7 +48,6 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
   const [userMenuAnchorEl, setUserMenuAnchorEl] = React.useState(null);
-  const [addOpen, setAddOpen] = React.useState(false);
   const { user, logout } = useAuth();
 
   const handleMenuOpen = (event) => {
@@ -102,16 +104,13 @@ function App() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             TodoList
           </Typography>
+          {user && (
+            <Typography variant="subtitle1" sx={{ mr: 2 }}>
+              Hello, {user.username}
+            </Typography>
+          )}
           {user ? (
             <>
-              <IconButton
-                color="inherit"
-                aria-label="add task"
-                onClick={() => setAddOpen(true)}
-                sx={{ mr: 2 }}
-              >
-                <AddIcon />
-              </IconButton>
               <IconButton
                 color="inherit"
                 onClick={handleUserMenuOpen}
@@ -132,8 +131,6 @@ function App() {
         </Toolbar>
       </AppBar>
 
-      <AddTodo open={addOpen} setOpen={setAddOpen} />
-
       <Box
         component="main"
         sx={{
@@ -141,6 +138,7 @@ function App() {
           p: 3,
           width: '100%',
           ml: 0,
+          position: 'relative',
         }}
       >
         <Container maxWidth="lg">
@@ -149,7 +147,7 @@ function App() {
               path="/"
               element={
                 <ProtectedRoute>
-                  <TodoList />
+                  <TaskList />
                 </ProtectedRoute>
               }
             />
@@ -178,12 +176,16 @@ function App() {
   );
 }
 
-// Wrap the app with AuthProvider
+// Wrap the app with Providers
 export default function AppWithProviders() {
   return (
     <Router>
       <AuthProvider>
-        <App />
+        <CategoryProvider>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <App />
+          </LocalizationProvider>
+        </CategoryProvider>
       </AuthProvider>
     </Router>
   );
